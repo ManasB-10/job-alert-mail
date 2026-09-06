@@ -27,7 +27,11 @@ day at **08:00 IST (Asia/Kolkata)**.
    remaining false positives, dedups near-identical postings, ranks by
    freshness/fresher-suitability/SOC-relevance/location, writes a one-line
    "why it fits" per job, and a short summary. **Not** used for web search.
-7. **Email** (`soc_job_agent/emailer.py`) — sends an HTML table via Brevo SMTP.
+7. **Archive** (`soc_job_agent/report_store.py`) — uploads the day's HTML
+   report and a structured JSON record to an IDrive e2 (S3-compatible)
+   bucket, before sending email, so a copy survives even if SMTP fails.
+   Optional: skipped with a log line if IDrive e2 vars aren't set.
+8. **Email** (`soc_job_agent/emailer.py`) — sends an HTML table via Brevo SMTP.
 
 ### Why not Gemini's built-in Google Search grounding?
 
@@ -60,6 +64,26 @@ EMAIL_TO=
 
 `EMAIL_FROM` must be a verified sender (or verified domain) in your Brevo
 account, or Brevo will reject the send.
+
+Optional -- daily report archiving to IDrive e2 (S3-compatible storage). Leave
+blank to skip archiving entirely; the email still sends either way:
+
+```
+IDRIVE_E2_ENDPOINT=s3.us-west-2.idrivee2.com
+IDRIVE_E2_REGION=us-west-2
+IDRIVE_E2_ACCESS_KEY=
+IDRIVE_E2_SECRET_KEY=
+IDRIVE_E2_BUCKET=
+```
+
+`IDRIVE_E2_BUCKET` is the bucket **name** (e.g. `ai-agent`), not a hostname --
+don't paste the full `bucket.s3.region.idrivee2.com` endpoint into it, that
+breaks the path-style request the client builds
+(`https://{endpoint}/{bucket}/{key}`).
+
+Each run writes `reports/<YYYY-MM-DD>/report.html` (the exact email body) and
+`reports/<YYYY-MM-DD>/report.json` (structured job list + stats) to the
+bucket.
 
 ## Running
 

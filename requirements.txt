@@ -1,2 +1,2 @@
-# Standard-library only, except:
 tzdata; sys_platform == "win32"  # Windows has no built-in IANA tz database for zoneinfo
+boto3  # S3-compatible upload of the daily report to IDrive e2

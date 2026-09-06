@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from . import emailer, gemini_client, history, linkedin_search
+from . import emailer, gemini_client, history, linkedin_search, report_store
 from .config import Config
 from .filters import post_detail_filter, pre_filter
 
@@ -37,13 +37,6 @@ def run(config: Config, today: date | None = None) -> dict:
 
     ranked_jobs, reasons, summary = gemini_client.score_and_rank(unreported, config.gemini_api_key)
 
-    subject = f"Daily SOC Analyst Fresher Jobs – Pune & Mumbai – {today.strftime('%d %b %Y')}"
-    html_body = emailer.build_email_html(ranked_jobs, reasons, summary, today)
-    emailer.send_email(config, subject, html_body)
-
-    if ranked_jobs:
-        history.record_sent(ranked_jobs, today=today)
-
     result = {
         "date": today.isoformat(),
         "raw_count": len(raw_jobs),
@@ -52,5 +45,17 @@ def run(config: Config, today: date | None = None) -> dict:
         "unreported_count": len(unreported),
         "sent_count": len(ranked_jobs),
     }
+
+    subject = f"Daily SOC Analyst Fresher Jobs – Pune & Mumbai – {today.strftime('%d %b %Y')}"
+    html_body = emailer.build_email_html(ranked_jobs, reasons, summary, today)
+
+    # Archive before sending: a saved report survives even if SMTP fails.
+    report_store.upload_daily_report(config, today, html_body, ranked_jobs, reasons, summary, result)
+
+    emailer.send_email(config, subject, html_body)
+
+    if ranked_jobs:
+        history.record_sent(ranked_jobs, today=today)
+
     logger.info("=== Run complete: %s ===", result)
     return result

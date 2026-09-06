@@ -1,0 +1,2 @@
+# Standard-library only, except:
+tzdata; sys_platform == "win32"  # Windows has no built-in IANA tz database for zoneinfo

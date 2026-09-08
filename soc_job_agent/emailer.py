@@ -35,7 +35,7 @@ def _posted_text(job: JobListing, today: date) -> str:
     return f"{job.posted_date.isoformat()} ({age_text}){note}"
 
 
-def build_email_html(
+def _build_jobs_section(
     jobs: list[JobListing],
     reasons: dict[str, str],
     overall_summary: str,
@@ -70,27 +70,53 @@ def build_email_html(
         """)
 
     return f"""
+    <p>{overall_summary}</p>
+    <table style="border-collapse:collapse;width:100%;">
+      <thead>
+        <tr style="background:#f2f2f2;">
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">#</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Title / Company</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Location</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Experience</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Posted</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Source</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Link</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Why it fits</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(rows)}
+      </tbody>
+    </table>
+    """
+
+
+def build_email_html(
+    jobs: list[JobListing],
+    reasons: dict[str, str],
+    overall_summary: str,
+    today: date,
+    extra_sections: list[str] | None = None,
+) -> str:
+    """Assembles the full email: job listings + any additional career-coaching
+    sections (skill gap, mock shift, interview drill, resume/LinkedIn coaching,
+    application tracker), each pre-rendered as an HTML fragment by its own
+    module so a failure in one section never affects the others.
+    """
+    jobs_html = _build_jobs_section(jobs, reasons, overall_summary, today)
+    sections_html = "".join(
+        f'<hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;"/>{section}'
+        for section in (extra_sections or [])
+        if section
+    )
+
+    return f"""
     <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">
-      <p>{overall_summary}</p>
-      <table style="border-collapse:collapse;width:100%;">
-        <thead>
-          <tr style="background:#f2f2f2;">
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">#</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">Title / Company</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">Location</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">Experience</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">Posted</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">Source</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">Link</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left;">Why it fits</th>
-          </tr>
-        </thead>
-        <tbody>
-          {''.join(rows)}
-        </tbody>
-      </table>
-      <p style="color:#888;font-size:12px;margin-top:16px;">
-        Sent automatically by your SOC Analyst job-monitoring agent.
+      <h2 style="margin-bottom:4px;">Today's Job Matches</h2>
+      {jobs_html}
+      {sections_html}
+      <p style="color:#888;font-size:12px;margin-top:20px;">
+        Sent automatically by your SOC Analyst career agent.
       </p>
     </div>
     """

@@ -31,6 +31,11 @@ def _load() -> dict:
         return {}
 
 
+def load_all() -> dict:
+    """Public accessor: {job_id: {title, company, fingerprint, last_sent}}."""
+    return _load()
+
+
 def _save(data: dict) -> None:
     HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = HISTORY_PATH.with_suffix(".tmp")

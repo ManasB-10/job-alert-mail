@@ -1,8 +1,10 @@
-# SOC Analyst Fresher Job Digest Agent
+# SOC Analyst Career Digest Agent
 
 Searches for recent SOC Analyst / entry-level security-operations job openings in
 Pune, Mumbai, Navi Mumbai and Thane, and emails a ranked top-10 shortlist every
-day at **08:00 IST (Asia/Kolkata)**.
+day at **08:00 IST (Asia/Kolkata)** -- plus a bundle of career-coaching sections
+(skill-gap analysis, a mock SOC ticket, interview drill, resume tailoring,
+LinkedIn keyword gaps, and application follow-up reminders) in the same email.
 
 ## How it works
 
@@ -32,6 +34,40 @@ day at **08:00 IST (Asia/Kolkata)**.
    bucket, before sending email, so a copy survives even if SMTP fails.
    Optional: skipped with a log line if IDrive e2 vars aren't set.
 8. **Email** (`soc_job_agent/emailer.py`) — sends an HTML table via Brevo SMTP.
+
+## Career-coaching sections
+
+Each of these is independently fault-tolerant (`pipeline._safe`) -- if one
+fails (e.g. Gemini overloaded), the others and the core job email still go
+out. All are bundled into the one daily email, below the job listings.
+
+| Section | Module | Cost | Needs |
+|---|---|---|---|
+| Skill Gap Insights | `skill_gap.py` | Free (keyword counting, no API) | Nothing -- builds up from postings seen over time (`data/job_corpus.jsonl`) |
+| Mock SOC Ticket | `mock_shift.py` | 1 Gemini call/day | Nothing -- generates a new scenario + model answer daily, rotating through 10 alert types |
+| Interview Drill | `interview_drill.py` | Free (curated bank, no API) | Nothing -- spaced-repetition over `interview_bank.py`'s ~20 Q&A |
+| Resume Tailoring | `resume_coach.py` | 1 Gemini call/day (only if enabled) | **`data/resume.txt`** -- your resume as plain text |
+| LinkedIn Keyword Gaps | `linkedin_coach.py` | Free (set difference, no API) | **`data/my_skills.txt`** -- your current LinkedIn skills, one per line |
+| Application Tracker | `application_tracker.py` | Free | Nothing to view; use `track.py` to mark applications |
+
+To activate resume tailoring and LinkedIn gap-checking, just create those two
+files with your real content -- the section switches from "not enabled yet"
+instructions to real output on the next run, no code changes needed.
+
+### Tracking applications
+
+No inbound email channel exists (would need a public webhook endpoint, out
+of scope for a local script), so you track applications yourself with a CLI:
+
+```powershell
+python track.py apply 4462432240              # job_id from the email's Apply link, or paste the whole URL
+python track.py status 4462432240 interview   # applied | interview | rejected | offer
+python track.py list
+```
+
+The email's Application Tracker section then reminds you to follow up on
+applications with no status update after 7/14/21 days, and nudges you about
+recent matches you haven't marked as applied yet.
 
 ### Why not Gemini's built-in Google Search grounding?
 
@@ -152,6 +188,12 @@ Unregister-ScheduledTask -TaskName "SOC_Job_Agent_Scheduler" -Confirm:$false
 - Max jobs enriched per run (cost/time cap): `pipeline.MAX_DETAIL_FETCHES`.
 - Gemini model: `gemini_client.MODEL` (currently `gemini-flash-lite-latest`;
   `gemini-flash-latest` was flaky/overloaded on this key at time of writing).
+- Skill keyword list: `skills_data.SKILL_KEYWORDS` -- add tools/certs here to
+  track more of them in Skill Gap Insights and LinkedIn Keyword Gaps.
+- Interview questions per day: `interview_drill.QUESTIONS_PER_DAY`; the bank
+  itself is `interview_bank.QUESTIONS` -- just add more dicts to grow it.
+- Mock ticket scenario types: `mock_shift.SCENARIO_TYPES`.
+- Follow-up reminder cadence: `application_tracker.FOLLOWUP_CHECKPOINTS_DAYS`.
 
 ## Notes / limitations
 

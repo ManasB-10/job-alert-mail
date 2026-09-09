@@ -66,7 +66,7 @@ YEARS_RE = re.compile(
     re.I,
 )
 
-FRESH_DAYS = 3
+FRESH_DAYS = 1  # "within 24 hours" is the preferred bucket
 MAX_AGE_DAYS = 21
 
 

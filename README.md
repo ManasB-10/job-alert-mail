@@ -147,7 +147,20 @@ that same day (tracked in `data/last_run_date.txt`), so you don't lose a day.
 
 ### Making it start automatically (no manual `python scheduler.py` each time)
 
-Run `register_scheduled_task.ps1` **in an elevated PowerShell window** (Run as
+**Currently active: a Startup-folder launcher (no admin rights needed).**
+`SOC_Job_Agent_Scheduler.vbs` (in this repo, and copied into
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`) silently
+launches `pythonw.exe scheduler.py` every time you log into Windows (Windows
+runs everything in this per-user folder automatically at logon, no
+elevation required). This is what's actually installed and running right
+now. If you move the project or Python install, edit the two paths in the
+`.vbs` file (both the copy in the Startup folder and this one). To remove
+it: delete the `.vbs` file from the Startup folder (open it via Win+R ->
+`shell:startup`).
+
+**Alternative: Windows Scheduled Task** (adds auto-restart if the process
+ever crashes, at the cost of needing one admin step). Run
+`register_scheduled_task.ps1` **in an elevated PowerShell window** (Run as
 Administrator) once:
 
 ```powershell
@@ -155,15 +168,19 @@ powershell -ExecutionPolicy Bypass -File "register_scheduled_task.ps1"
 ```
 
 This registers a Windows Scheduled Task (`SOC_Job_Agent_Scheduler`) that
-starts `scheduler.py` hidden (via `pythonw.exe`) whenever you log into
-Windows, and restarts it automatically if it ever crashes. It was not
-possible to register this task from within the coding-agent session itself
-(Task Scheduler registration requires an elevated/admin prompt that a
-non-interactive process can't answer) — this one-time step needs to be run
-by you, manually, in an admin terminal.
+starts `scheduler.py` hidden (via `pythonw.exe`) at logon and restarts it if
+it crashes. Task Scheduler registration itself requires an elevated/admin
+prompt that a non-interactive process can't answer, which is why the
+Startup-folder approach above is the one actually in use -- it needed no
+admin step at all. If you do register the Scheduled Task later, remove the
+Startup `.vbs` first so you don't end up with two schedulers running at
+once.
 
-To check it's running: Task Scheduler app -> Task Scheduler Library ->
-`SOC_Job_Agent_Scheduler`. To stop/remove it:
+To check the Startup one's running: Task Manager -> Details tab -> look for
+`pythonw.exe`, or `Get-Process pythonw` in PowerShell.
+
+To check the alternative Scheduled Task (if used) is running: Task Scheduler
+app -> Task Scheduler Library -> `SOC_Job_Agent_Scheduler`. To stop/remove it:
 
 ```powershell
 Unregister-ScheduledTask -TaskName "SOC_Job_Agent_Scheduler" -Confirm:$false
